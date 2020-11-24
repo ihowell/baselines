@@ -62,7 +62,11 @@ def train(args, extra_args):
 
     env = build_env(args)
     if args.save_video_interval != 0:
-        env = VecVideoRecorder(env, osp.join(logger.get_dir(), "videos"), record_video_trigger=lambda x: x % args.save_video_interval == 0, video_length=args.save_video_length)
+        env = VecVideoRecorder(
+            env,
+            osp.join(logger.get_dir(), "videos"),
+            record_video_trigger=lambda x: x % args.save_video_interval == 0,
+            video_length=args.save_video_length)
 
     if args.network:
         alg_kwargs['network'] = args.network
@@ -70,14 +74,13 @@ def train(args, extra_args):
         if alg_kwargs.get('network') is None:
             alg_kwargs['network'] = get_default_network(env_type)
 
-    print('Training {} on {}:{} with arguments \n{}'.format(args.alg, env_type, env_id, alg_kwargs))
+    print('Training {} on {}:{} with arguments \n{}'.format(
+        args.alg, env_type, env_id, alg_kwargs))
 
-    model = learn(
-        env=env,
-        seed=seed,
-        total_timesteps=total_timesteps,
-        **alg_kwargs
-    )
+    model = learn(env=env,
+                  seed=seed,
+                  total_timesteps=total_timesteps,
+                  **alg_kwargs)
 
     return model, env
 
@@ -93,17 +96,30 @@ def build_env(args):
 
     if env_type in {'atari', 'retro'}:
         if alg == 'deepq':
-            env = make_env(env_id, env_type, seed=seed, wrapper_kwargs={'frame_stack': True})
+            env = make_env(env_id,
+                           env_type,
+                           seed=seed,
+                           wrapper_kwargs={'frame_stack': True})
         elif alg == 'trpo_mpi':
             env = make_env(env_id, env_type, seed=seed)
         else:
             frame_stack_size = 4
-            env = make_vec_env(env_id, env_type, nenv, seed, gamestate=args.gamestate, reward_scale=args.reward_scale)
+            env = make_vec_env(env_id,
+                               env_type,
+                               nenv,
+                               seed,
+                               gamestate=args.gamestate,
+                               reward_scale=args.reward_scale)
             env = VecFrameStack(env, frame_stack_size)
 
     else:
         flatten_dict_observations = alg not in {'her'}
-        env = make_vec_env(env_id, env_type, args.num_env or 1, seed, reward_scale=args.reward_scale, flatten_dict_observations=flatten_dict_observations)
+        env = make_vec_env(env_id,
+                           env_type,
+                           args.num_env or 1,
+                           seed,
+                           reward_scale=args.reward_scale,
+                           flatten_dict_observations=flatten_dict_observations)
 
         if env_type == 'mujoco':
             env = VecNormalize(env)
@@ -133,7 +149,8 @@ def get_env_type(args):
                 break
         if ':' in env_id:
             env_type = re.sub(r':.*', '', env_id)
-        assert env_type is not None, 'env_id {} is not recognized in env types'.format(env_id, _game_envs.keys())
+        assert env_type is not None, 'env_id {} is not recognized in env types'.format(
+            env_id, _game_envs.keys())
 
     return env_type, env_id
 
@@ -143,6 +160,7 @@ def get_default_network(env_type):
         return 'cnn'
     else:
         return 'mlp'
+
 
 def get_alg_module(alg, submodule=None):
     submodule = submodule or alg
@@ -169,7 +187,6 @@ def get_learn_function_defaults(alg, env_type):
     return kwargs
 
 
-
 def parse_cmdline_kwargs(args):
     '''
     convert a list of '='-spaced command-line arguments to a dictionary, evaluating python objects when possible
@@ -182,7 +199,7 @@ def parse_cmdline_kwargs(args):
         except (NameError, SyntaxError):
             return v
 
-    return {k: parse(v) for k,v in parse_unknown_args(args).items()}
+    return {k: parse(v) for k, v in parse_unknown_args(args).items()}
 
 
 def configure_logger(log_path, **kwargs):
@@ -220,14 +237,16 @@ def main(args):
         if not isinstance(env, VecEnv):
             obs = np.expand_dims(np.array(obs), axis=0)
 
-        state = model.initial_state if hasattr(model, 'initial_state') else None
+        state = model.initial_state if hasattr(model,
+                                               'initial_state') else None
 
-        episode_rew = np.zeros(env.num_envs) if isinstance(env, VecEnv) else np.zeros(1)
+        episode_rew = np.zeros(env.num_envs) if isinstance(
+            env, VecEnv) else np.zeros(1)
         while True:
             if state is not None:
                 actions, _, state, _ = model.step(obs)
             else:
-              actions, _, _, _ = model.step(obs)
+                actions, _, _, _ = model.step(obs)
 
             obs, rew, done, _ = env.step(actions.numpy())
             if not isinstance(env, VecEnv):
@@ -243,6 +262,7 @@ def main(args):
     env.close()
 
     return model
+
 
 if __name__ == '__main__':
     main(sys.argv)
